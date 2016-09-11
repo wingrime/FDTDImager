@@ -25,9 +25,10 @@ class Solver():
         self.imp0 = 377.0
         # courant number
         self.cn = (1.0 / math.sqrt(2))
-
         # solve step
         self.time = 0
+        self.center_x = math.floor(self.x_sz / 2)
+        self.center_y = math.floor(self.y_sz / 2)
 
     def _uH(self):
         """ Update H field """
@@ -36,17 +37,9 @@ class Solver():
         c2 = self.cn / self.imp0
         c3 = 1.0
         c4 = self.cn / self.imp0
-        # Hx update
-        # for i in range(self.x_sz):
-        #    for j in range(self.y_sz-1):
-        #        self.Hx[i,j] = c1* self.Hx[i,j] - c2*(self.Ez[i,j+1]-self.Ez[i,j])
-        # Hy update
 
         self.Hx[:, :-1] = c1 * self.Hx[:, :-1] - \
             c2 * (self.Ez[:, 1:] - self.Ez[:, :-1])
-        # for i in range(self.x_sz-1):
-        #    for j in range(self.y_sz):
-        #        self.Hy[i,j] = c3* self.Hy[i,j] + c4*(self.Ez[i+1,j]-self.Ez[i,j])
         self.Hy[:-1, :] = c3 * self.Hy[:-1, :] + \
             c4 * (self.Ez[1:, :] - self.Ez[:-1, :])
 
@@ -57,22 +50,15 @@ class Solver():
         c6 = 1.0
         c7 = self.cn * self.imp0
 
-        # Ez update
-        # for i in range (1,self.x_sz-1):
-        #    for j in range (1,self.y_sz-1):
-        #        self.Ez[i,j] = c5*self.Ez[i,j] + c7*((self.Hy[i,j] - self.Hy[i-1,j]) - (self.Hx[i,j] - self.Hx[i,j-1]))
-
-        # numpy vectorization
-        self.Ez[1:-1,
-                1:-1] = c5 * self.Ez[1:-1,
-                                     1:-1] + c7 * ((self.Hy[1:-1,
-                                                            1:-1] - self.Hy[:-2,
-                                                                            1:-1]) - (self.Hx[1:-1,
-                                                                                              1:-1] - self.Hx[1:-1,
-                                                                                                              :-2]))
+        self.Ez[1:-1, 1:-1] = c5 * \
+            self.Ez[1:-1, 1:-1] + c7 * \
+            ((self.Hy[1:-1, 1:-1] - self.Hy[:-2, 1:-1]) -
+                (self.Hx[1:-1, 1:-1] - self.Hx[1:-1, :-2]))
 
     def solveStep(self):
-        """ Solve single 2D step within gived boundary conditions and source """
+        """
+        Solve single 2D step within gived boundary conditions and source
+        """
         self._uH()
         self._uE()
         self.time += 1
@@ -81,10 +67,7 @@ class Solver():
         ppw = 70  # points per wavelength
         a = math.pi * ((self.cn * self.time) / ppw - 1.0)
         a = a * a
-        self.Ez[math.floor(self.x_sz / 2)][math.floor(self.y_sz / 2)
-                                           ] = 10 * (1.0 - 2.0 * a) * math.exp(-a)
-        # if self.time < 700:
-        #    self.Ez[math.floor(self.x_sz/2)][math.floor(self.y_sz/2)] = math.sin(self.cn*self.time/50)*2
+        self.Ez[self.center_x][self.center_y] = 10 * (1.0 - 2.0 * a) * math.exp(-a)
 
     def solveTime(self, times=10):
         tmg = [0] * times
@@ -102,7 +85,7 @@ class Solver():
                 if self.time % 10 == 0:
                     self.dumpState()
                 # except (ValueError):
-                #    print ("Simulation reached incorrect values (NaN) at t=%d STOP" % self.time)
+                #    print ("Simulation reached incorrect values at t=%d STOP" % self.time)
             except (OverflowError):
                 print (
                     "Simulation reached incorrent values (Too Big) at t=%dSTOP" %
@@ -121,7 +104,6 @@ class Solver():
             for j in range(self.y_sz):
                 # TODO do correct remap
                 Ep = int(abs(float(self.Ez[i, j]) * 600))
-                #Hp = int (abs((self.Hx[i][j])*600*377 ))
                 try:
                     rast[i, j] = (Ep, 0, 0)
                 except (ValueError, OverflowError):
@@ -134,4 +116,3 @@ class Solver():
 print("START")
 slv = Solver()
 slv.solveTime(1000)
-# slv.dumpState()
