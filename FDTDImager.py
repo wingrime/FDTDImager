@@ -100,7 +100,7 @@ class Solver():
 
 
     def dumpState(self):
-        fname = ("FDTD2D-T%d.png" % self.time)
+        fname = ("FDTD2D-T%04d.png" % self.time)
         img = Image.new("RGB",(self.x_sz,self.y_sz))
         rast = img.load()
         for i in range (self.x_sz):
